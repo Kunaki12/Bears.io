@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#203e33">
+  <title>Bears.io</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Georgia, "Times New Roman", serif;
+      background: #203e33;
+      color: #fff2d4;
+      font-synthesis: none;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body { background: #203e33; }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      outline: none;
+      cursor: crosshair;
+    }
+
+    .hud {
+      position: fixed;
+      z-index: 2;
+      top: 18px;
+      left: 18px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+      border: 1px solid rgb(255 241 211 / 22%);
+      border-radius: 7px;
+      background: rgb(20 43 35 / 84%);
+      box-shadow: 0 8px 28px rgb(10 24 20 / 20%);
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    .brand {
+      color: #ffe09a;
+      font-size: 23px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .mode {
+      margin-top: 4px;
+      color: #9fc8a9;
+      font: 10px/1.2 Arial, sans-serif;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .divider { width: 1px; height: 34px; background: rgb(255 241 211 / 22%); }
+
+    .stat-label {
+      color: #b6c8b3;
+      font: 10px/1.4 Arial, sans-serif;
+      text-transform: uppercase;
+    }
+
+    .stat-value { color: #fff4dc; font-size: 17px; }
+
+    .right-tools {
+      position: fixed;
+      z-index: 2;
+      top: 18px;
+      right: 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .leaderboard {
+      min-width: 150px;
+      padding: 11px 14px;
+      border: 1px solid rgb(255 241 211 / 20%);
+      border-radius: 7px;
+      background: rgb(20 43 35 / 82%);
+      backdrop-filter: blur(8px);
+    }
+
+    .leaderboard-title {
+      margin-bottom: 7px;
+      color: #d0dcbd;
+      font: 10px Arial, sans-serif;
+      letter-spacing: 1.3px;
+      text-transform: uppercase;
+    }
+
+    .leader-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      color: #f8e9c7;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .leader-row.you { color: #ffd987; }
+
+    button {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgb(255 241 211 / 25%);
+      border-radius: 7px;
+      color: #fff0cf;
+      background: rgb(20 43 35 / 86%);
+      cursor: pointer;
+    }
+
+    button:hover { background: #345948; }
+    button svg { width: 17px; height: 17px; }
+
+    .boost-meter {
+      position: fixed;
+      z-index: 2;
+      bottom: 20px;
+      left: 20px;
+      width: min(220px, calc(100vw - 40px));
+      color: #f7e8c8;
+      font: 10px Arial, sans-serif;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+
+    .meter-track {
+      height: 5px;
+      margin-top: 7px;
+      overflow: hidden;
+      border-radius: 5px;
+      background: rgb(255 242 212 / 22%);
+    }
+
+    .meter-fill {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #e6a45f, #f8d482);
+      transform-origin: left center;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 3;
+      top: 84px;
+      left: 50%;
+      padding: 9px 14px;
+      border: 1px solid rgb(255 241 211 / 20%);
+      border-radius: 6px;
+      color: #fff1d2;
+      background: rgb(20 43 35 / 88%);
+      font: 13px Arial, sans-serif;
+      opacity: 0;
+      transform: translate(-50%, -5px);
+      transition: opacity 160ms ease, transform 160ms ease;
+      pointer-events: none;
+    }
+
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    .lobby {
+      position: fixed;
+      z-index: 5;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgb(13 31 25 / 62%);
+      backdrop-filter: blur(5px);
+    }
+
+    .lobby-panel {
+      width: min(410px, 100%);
+      padding: 28px;
+      border: 1px solid rgb(255 241 211 / 25%);
+      border-radius: 8px;
+      background: #1b382e;
+      box-shadow: 0 24px 70px rgb(8 22 17 / 40%);
+    }
+
+    .lobby-panel h1 {
+      margin: 0;
+      color: #ffe09a;
+      font-size: 32px;
+    }
+
+    .lobby-panel p {
+      margin: 7px 0 22px;
+      color: #bbd0ba;
+      font: 14px/1.5 Arial, sans-serif;
+    }
+
+    .lobby-panel label {
+      display: block;
+      margin: 14px 0 6px;
+      color: #e8dfc5;
+      font: 11px Arial, sans-serif;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .lobby-panel input {
+      width: 100%;
+      height: 42px;
+      padding: 0 12px;
+      border: 1px solid rgb(255 241 211 / 24%);
+      border-radius: 5px;
+      outline: none;
+      color: #fff1d2;
+      background: #142b23;
+      font: 14px Arial, sans-serif;
+    }
+
+    .lobby-panel input:focus { border-color: #eac577; }
+
+    .lobby-panel button {
+      width: 100%;
+      height: 44px;
+      display: block;
+      margin-top: 20px;
+      border: 0;
+      border-radius: 5px;
+      color: #263b2b;
+      background: #f1d28a;
+      font: 700 14px Arial, sans-serif;
+    }
+
+    .lobby-panel button:hover { background: #ffe2a0; }
+    .lobby-panel button:disabled { cursor: wait; opacity: 0.7; }
+
+    .lobby-status {
+      min-height: 18px;
+      margin-top: 12px;
+      color: #c6d4bb;
+      font: 12px/1.5 Arial, sans-serif;
+    }
+
+    @media (max-width: 640px) {
+      .hud { top: 10px; left: 10px; gap: 10px; padding: 10px 11px; }
+      .brand { font-size: 19px; }
+      .right-tools { top: 10px; right: 10px; gap: 7px; }
+      .leaderboard { min-width: 118px; padding: 9px 10px; }
+      .leader-row { gap: 8px; font-size: 11px; }
+      .leaderboard-title { font-size: 9px; }
+      button { width: 36px; height: 36px; }
+      .boost-meter { bottom: 14px; left: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="arena" tabindex="0" aria-label="Bears.io game arena"></canvas>
+  <section class="hud" aria-label="Game stats">
+    <div>
+      <div class="brand">Bears.io</div>
+      <div class="mode">Solo · Wildwood</div>
+    </div>
+    <div class="divider"></div>
+    <div><div class="stat-label">Size</div><div class="stat-value" id="size">24</div></div>
+    <div><div class="stat-label">Berries</div><div class="stat-value" id="score">0</div></div>
+    <div><div class="stat-label">Players</div><div class="stat-value" id="player-count">0</div></div>
+  </section>
+  <div class="right-tools">
+    <aside class="leaderboard" aria-label="Largest bears">
+      <div class="leaderboard-title">Largest bears</div>
+      <div id="leaders"></div>
+    </aside>
+    <button id="restart" type="button" title="Start a new run" aria-label="Start a new run">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 7v5h-5M4.9 16a8 8 0 0 0 13.2 2.1L20 16M4 12a8 8 0 0 1 13.2-6.1L20 8"/>
+      </svg>
+    </button>
+  </div>
+  <div class="boost-meter">Dash energy<div class="meter-track"><div id="energy" class="meter-fill"></div></div></div>
+  <div id="toast" class="toast" role="status"></div>
+  <div class="lobby" id="lobby">
+    <form class="lobby-panel" id="join-form">
+      <h1>Bears.io</h1>
+      <p>Join the Wildwood arena and see who grows biggest.</p>
+      <label for="player-name">Bear name</label>
+      <input id="player-name" name="name" maxlength="18" value="Bear" autocomplete="nickname" required>
+      <label for="server-address">Game server</label>
+      <input id="server-address" name="server" spellcheck="false" required>
+      <button id="join-button" type="submit">Join arena</button>
+      <div class="lobby-status" id="lobby-status" role="status">Connect to a running Bears.io server.</div>
+    </form>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.querySelector("#arena");
+      const ctx = canvas.getContext("2d");
+      const sizeDisplay = document.querySelector("#size");
+      const scoreDisplay = document.querySelector("#score");
+      const playerCountDisplay = document.querySelector("#player-count");
+      const leadersDisplay = document.querySelector("#leaders");
+      const energyDisplay = document.querySelector("#energy");
+      const toast = document.querySelector("#toast");
+      const lobby = document.querySelector("#lobby");
+      const joinForm = document.querySelector("#join-form");
+      const joinButton = document.querySelector("#join-button");
+      const lobbyStatus = document.querySelector("#lobby-status");
+      const modeDisplay = document.querySelector(".mode");
+      const serverAddressInput = document.querySelector("#server-address");
+
+      const WORLD = 5000;
+      const BASE_SPEED = 240;
+      const FOOD_COUNT = 250;
+      const BOT_COUNT = 18;
+      const berryColors = ["#ed9a5e", "#79bc80", "#e56f62", "#e6c56b", "#a5bd72"];
+      const bearColors = ["#754b32", "#a2673f", "#526d4c", "#b17a50", "#685547"];
+      const held = new Set();
+      const game = { player: null, playerId: null, players: [], food: [], bots: [], cameraX: 0, cameraY: 0, score: 0, energy: 1, paused: false, lastTime: 0, socket: null, connected: false };
+      let viewWidth = innerWidth;
+      let viewHeight = innerHeight;
+      let pixelRatio = 1;
+      let toastTimer = 0;
+
+      function resize() {
+        pixelRatio = Math.min(devicePixelRatio || 1, 2);
+        viewWidth = innerWidth;
+        viewHeight = innerHeight;
+        canvas.width = Math.round(viewWidth * pixelRatio);
+        canvas.height = Math.round(viewHeight * pixelRatio);
+        canvas.style.width = `${viewWidth}px`;
+        canvas.style.height = `${viewHeight}px`;
+        ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      const socketScheme = location.protocol === "https:" ? "wss:" : "ws:";
+      serverAddressInput.value = `${socketScheme}//${location.host || "localhost:8765"}/ws`;
+
+      function randomBetween(min, max) { return min + Math.random() * (max - min); }
+
+      function makeFood() {
+        return {
+          x: randomBetween(24, WORLD - 24),
+          y: randomBetween(24, WORLD - 24),
+          size: randomBetween(4, 8),
+          color: berryColors[Math.floor(Math.random() * berryColors.length)],
+          phase: Math.random() * Math.PI * 2,
+        };
+      }
+
+      function makeBot(index) {
+        return {
+          x: randomBetween(80, WORLD - 80),
+          y: randomBetween(80, WORLD - 80),
+          radius: randomBetween(13, 34),
+          color: bearColors[index % bearColors.length],
+          name: `Bear ${String(index + 1).padStart(2, "0")}`,
+          direction: randomBetween(0, Math.PI * 2),
+          turnIn: randomBetween(0.5, 3),
+        };
+      }
+
+      function reset() {
+        if (game.connected) {
+          showToast("Your run continues in the arena");
+          return;
+        }
+        game.player = { x: WORLD / 2, y: WORLD / 2, radius: 24, color: "#8d5938" };
+        game.cameraX = game.player.x - viewWidth / 2;
+        game.cameraY = game.player.y - viewHeight / 2;
+        game.food = Array.from({ length: FOOD_COUNT }, makeFood);
+        game.bots = Array.from({ length: BOT_COUNT }, (_, index) => makeBot(index));
+        game.score = 0;
+        game.energy = 1;
+        game.paused = false;
+        held.clear();
+        showToast("A new run begins");
+        updateHud();
+        canvas.focus({ preventScroll: true });
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add("show");
+        toastTimer = 1.6;
+      }
+
+      function updateHud() {
+        if (!game.player) return;
+        sizeDisplay.textContent = Math.round(game.player.radius);
+        scoreDisplay.textContent = game.score;
+        playerCountDisplay.textContent = game.players.length;
+        energyDisplay.style.transform = `scaleX(${game.energy})`;
+        const leaders = [...game.bots, ...game.players.map(player => ({
+          ...player,
+          isPlayer: player.id === game.playerId,
+          name: player.id === game.playerId ? `${player.name} (you)` : player.name,
+        }))]
+          .sort((a, b) => b.radius - a.radius)
+          .slice(0, 5);
+        leadersDisplay.replaceChildren(...leaders.map((bear, index) => {
+          const row = document.createElement("div");
+          row.className = `leader-row${bear.isPlayer ? " you" : ""}`;
+          const name = document.createElement("span");
+          name.textContent = `${index + 1}. ${bear.name}`;
+          const radius = document.createElement("span");
+          radius.textContent = Math.round(bear.radius);
+          row.append(name, radius);
+          return row;
+        }));
+      }
+
+      function hash(x, y) {
+        let value = Math.imul(x ^ 0x45d9f3b, 0x45d9f3b) ^ Math.imul(y ^ 0x119de1f3, 0x119de1f3);
+        value = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
+        return ((value ^ (value >>> 16)) >>> 0) / 4294967295;
+      }
+
+      function drawGround(time) {
+        ctx.fillStyle = "#284c3e";
+        ctx.fillRect(0, 0, viewWidth, viewHeight);
+        const tile = 72;
+        const startX = Math.floor(game.cameraX / tile) - 1;
+        const startY = Math.floor(game.cameraY / tile) - 1;
+        const endX = Math.ceil((game.cameraX + viewWidth) / tile) + 1;
+        const endY = Math.ceil((game.cameraY + viewHeight) / tile) + 1;
+        const groundColors = ["#2c5142", "#315744", "#294c3e", "#345743", "#2d5040"];
+
+        for (let worldY = startY; worldY <= endY; worldY++) {
+          for (let worldX = startX; worldX <= endX; worldX++) {
+            const screenX = worldX * tile - game.cameraX;
+            const screenY = worldY * tile - game.cameraY;
+            const seed = hash(worldX, worldY);
+            ctx.fillStyle = groundColors[Math.floor(seed * groundColors.length)];
+            ctx.fillRect(screenX, screenY, tile + 1, tile + 1);
+            for (let speck = 0; speck < 3; speck++) {
+              const offset = hash(worldX * 7 + speck, worldY * 11 - speck);
+              ctx.fillStyle = offset > 0.5 ? "rgb(183 193 130 / 10%)" : "rgb(15 40 31 / 11%)";
+              ctx.beginPath();
+              ctx.ellipse(screenX + 12 + offset * 48, screenY + 15 + hash(worldY, speck) * 42, 2 + offset * 3, 1.5, offset, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+
+        const vignette = ctx.createRadialGradient(viewWidth / 2, viewHeight / 2, Math.min(viewWidth, viewHeight) * 0.18, viewWidth / 2, viewHeight / 2, Math.max(viewWidth, viewHeight) * 0.75);
+        vignette.addColorStop(0, "rgb(11 27 22 / 0%)");
+        vignette.addColorStop(1, "rgb(11 27 22 / 30%)");
+        ctx.fillStyle = vignette;
+        ctx.fillRect(0, 0, viewWidth, viewHeight);
+      }
+
+      function drawBerry(item, time) {
+        const x = item.x - game.cameraX;
+        const y = item.y - game.cameraY + Math.sin(time * 2 + item.phase) * 1.3;
+        if (x < -15 || y < -15 || x > viewWidth + 15 || y > viewHeight + 15) return;
+        ctx.save();
+        ctx.shadowColor = `${item.color}88`;
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = item.color;
+        ctx.beginPath();
+        ctx.arc(x, y, item.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#9dc17b";
+        ctx.beginPath();
+        ctx.ellipse(x + item.size * 0.38, y - item.size * 0.72, item.size * 0.42, item.size * 0.18, -0.7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawBear(bear, isPlayer = false) {
+        const x = bear.x - game.cameraX;
+        const y = bear.y - game.cameraY;
+        if (x < -bear.radius - 30 || y < -bear.radius - 30 || x > viewWidth + bear.radius + 30 || y > viewHeight + bear.radius + 30) return;
+        const r = bear.radius;
+        ctx.save();
+        ctx.shadowColor = "rgb(12 27 21 / 42%)";
+        ctx.shadowBlur = Math.max(5, r * 0.24);
+        ctx.shadowOffsetY = Math.max(2, r * 0.08);
+        ctx.fillStyle = bear.color;
+        ctx.beginPath();
+        ctx.arc(x - r * 0.55, y - r * 0.62, r * 0.34, 0, Math.PI * 2);
+        ctx.arc(x + r * 0.55, y - r * 0.62, r * 0.34, 0, Math.PI * 2);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.fillStyle = "#f0d5ad";
+        ctx.beginPath();
+        ctx.ellipse(x, y + r * 0.2, r * 0.45, r * 0.34, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#241e1a";
+        ctx.beginPath();
+        ctx.arc(x - r * 0.31, y - r * 0.17, Math.max(1.8, r * 0.085), 0, Math.PI * 2);
+        ctx.arc(x + r * 0.31, y - r * 0.17, Math.max(1.8, r * 0.085), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#493127";
+        ctx.beginPath();
+        ctx.ellipse(x, y + r * 0.2, Math.max(2.5, r * 0.13), Math.max(1.8, r * 0.085), 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = isPlayer ? "#ffe5a3" : "rgb(255 241 211 / 40%)";
+        ctx.lineWidth = isPlayer ? Math.max(2, r * 0.07) : 1.2;
+        ctx.beginPath();
+        ctx.arc(x, y, r + (isPlayer ? 2.5 : 0), 0, Math.PI * 2);
+        ctx.stroke();
+        if (!isPlayer && r > 18) {
+          ctx.fillStyle = "#f4e5c9";
+          ctx.font = "11px Arial, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(bear.name, x, y - r - 8);
+        }
+        ctx.restore();
+      }
+
+      function respawnBot(bot) {
+        bot.x = randomBetween(40, WORLD - 40);
+        bot.y = randomBetween(40, WORLD - 40);
+        bot.radius = randomBetween(13, 34);
+        bot.direction = randomBetween(0, Math.PI * 2);
+      }
+
+      function update(dt) {
+        if (game.paused) return;
+        const moveX = Number(held.has("d") || held.has("ArrowRight")) - Number(held.has("a") || held.has("ArrowLeft"));
+        const moveY = Number(held.has("s") || held.has("ArrowDown")) - Number(held.has("w") || held.has("ArrowUp"));
+        if (game.connected && game.socket?.readyState === WebSocket.OPEN) {
+          game.socket.send(JSON.stringify({ type: "input", x: moveX, y: moveY, boost: held.has(" ") }));
+          if (game.player) {
+            const screenX = game.player.x - game.cameraX;
+            const screenY = game.player.y - game.cameraY;
+            if (screenX < viewWidth * 0.2) game.cameraX = game.player.x - viewWidth * 0.2;
+            else if (screenX > viewWidth * 0.8) game.cameraX = game.player.x - viewWidth * 0.8;
+            if (screenY < viewHeight * 0.2) game.cameraY = game.player.y - viewHeight * 0.2;
+            else if (screenY > viewHeight * 0.8) game.cameraY = game.player.y - viewHeight * 0.8;
+            game.cameraX = Math.max(0, Math.min(WORLD - viewWidth, game.cameraX));
+            game.cameraY = Math.max(0, Math.min(WORLD - viewHeight, game.cameraY));
+          }
+          updateHud();
+          return;
+        }
+        const length = Math.hypot(moveX, moveY);
+        const boosting = held.has(" ") && game.energy > 0.01;
+        const sizePenalty = Math.pow(24 / game.player.radius, 0.16);
+        if (length) {
+          const speed = BASE_SPEED * sizePenalty * (boosting ? 1.65 : 1);
+          game.player.x += moveX / length * speed * dt;
+          game.player.y += moveY / length * speed * dt;
+        }
+        game.energy = Math.max(0, Math.min(1, game.energy + (boosting ? -0.42 : 0.22) * dt));
+        game.player.x = Math.max(game.player.radius, Math.min(WORLD - game.player.radius, game.player.x));
+        game.player.y = Math.max(game.player.radius, Math.min(WORLD - game.player.radius, game.player.y));
+
+        for (let index = game.food.length - 1; index >= 0; index--) {
+          const item = game.food[index];
+          if (Math.hypot(game.player.x - item.x, game.player.y - item.y) < game.player.radius + item.size) {
+            game.player.radius += item.size * 0.12;
+            game.score++;
+            game.food[index] = makeFood();
+          }
+        }
+
+        for (const bot of game.bots) {
+          bot.turnIn -= dt;
+          if (bot.turnIn <= 0) {
+            bot.direction += randomBetween(-1.5, 1.5);
+            bot.turnIn = randomBetween(0.6, 2.8);
+          }
+          const botSpeed = randomBetween(17, 26);
+          bot.x += Math.cos(bot.direction) * botSpeed * dt;
+          bot.y += Math.sin(bot.direction) * botSpeed * dt;
+          if (bot.x < bot.radius || bot.x > WORLD - bot.radius) bot.direction = Math.PI - bot.direction;
+          if (bot.y < bot.radius || bot.y > WORLD - bot.radius) bot.direction = -bot.direction;
+          bot.x = Math.max(bot.radius, Math.min(WORLD - bot.radius, bot.x));
+          bot.y = Math.max(bot.radius, Math.min(WORLD - bot.radius, bot.y));
+
+          if (Math.hypot(game.player.x - bot.x, game.player.y - bot.y) < game.player.radius + bot.radius) {
+            if (game.player.radius > bot.radius * 1.15) {
+              game.player.radius += bot.radius * 0.15;
+              game.score += 5;
+              respawnBot(bot);
+              showToast("Bear defeated · +5 berries");
+            } else if (bot.radius > game.player.radius * 1.15) {
+              game.player.radius = Math.max(20, game.player.radius * 0.97);
+              game.score = Math.max(0, game.score - 3);
+              game.player.x = WORLD / 2;
+              game.player.y = WORLD / 2;
+              showToast("Outmatched · back to the den");
+            }
+          }
+        }
+
+        const screenX = game.player.x - game.cameraX;
+        const screenY = game.player.y - game.cameraY;
+        if (screenX < viewWidth * 0.2) game.cameraX = game.player.x - viewWidth * 0.2;
+        else if (screenX > viewWidth * 0.8) game.cameraX = game.player.x - viewWidth * 0.8;
+        if (screenY < viewHeight * 0.2) game.cameraY = game.player.y - viewHeight * 0.2;
+        else if (screenY > viewHeight * 0.8) game.cameraY = game.player.y - viewHeight * 0.8;
+        game.cameraX = Math.max(0, Math.min(WORLD - viewWidth, game.cameraX));
+        game.cameraY = Math.max(0, Math.min(WORLD - viewHeight, game.cameraY));
+
+        if (toastTimer > 0) {
+          toastTimer -= dt;
+          if (toastTimer <= 0) toast.classList.remove("show");
+        }
+        updateHud();
+      }
+
+      function draw(time) {
+        ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        drawGround(time);
+        for (const item of game.food) drawBerry(item, time);
+        for (const bot of game.bots) drawBear(bot);
+        for (const player of game.players) drawBear(player, player.id === game.playerId);
+        drawBear(game.player, true);
+        if (game.paused) {
+          ctx.fillStyle = "rgb(13 31 25 / 54%)";
+          ctx.fillRect(0, 0, viewWidth, viewHeight);
+          ctx.fillStyle = "#fff0cf";
+          ctx.textAlign = "center";
+          ctx.font = "bold 30px Georgia, serif";
+          ctx.fillText("Paused", viewWidth / 2, viewHeight / 2);
+        }
+      }
+
+      function frame(time) {
+        if (!game.lastTime) game.lastTime = time;
+        const dt = Math.min((time - game.lastTime) / 1000, 0.05);
+        game.lastTime = time;
+        update(dt);
+        draw(time / 1000);
+        requestAnimationFrame(frame);
+      }
+
+      function applyState(state) {
+        game.players = (state.players || []).map(player => ({ ...player, isPlayer: player.id === game.playerId }));
+        game.food = state.food || [];
+        game.bots = state.bots || [];
+        const ownPlayer = game.players.find(player => player.id === game.playerId);
+        if (ownPlayer) {
+          game.player = ownPlayer;
+          game.score = ownPlayer.score;
+          game.energy = ownPlayer.energy;
+        }
+        updateHud();
+      }
+
+      joinForm.addEventListener("submit", event => {
+        event.preventDefault();
+        const serverAddress = document.querySelector("#server-address").value.trim();
+        const playerName = document.querySelector("#player-name").value.trim();
+        let socketUrl;
+        try {
+          socketUrl = new URL(serverAddress);
+          if (!["ws:", "wss:"].includes(socketUrl.protocol)) throw new Error("Use a ws:// or wss:// address.");
+        } catch (error) {
+          lobbyStatus.textContent = error.message || "Enter a valid WebSocket server address.";
+          return;
+        }
+
+        joinButton.disabled = true;
+        lobbyStatus.textContent = "Connecting to the arena...";
+        const socket = new WebSocket(socketUrl);
+        game.socket = socket;
+
+        socket.addEventListener("open", () => {
+          socket.send(JSON.stringify({ type: "join", name: playerName }));
+        });
+        socket.addEventListener("message", event => {
+          let message;
+          try { message = JSON.parse(event.data); }
+          catch { return; }
+          if (message.type === "welcome") {
+            game.playerId = message.id;
+            game.connected = true;
+            applyState(message.state);
+            lobby.classList.remove("show");
+            lobby.style.display = "none";
+            modeDisplay.textContent = "Online · Wildwood";
+            canvas.focus({ preventScroll: true });
+            showToast("Joined the Wildwood arena");
+          } else if (message.type === "state") {
+            applyState(message);
+          } else if (message.type === "error") {
+            lobbyStatus.textContent = message.message;
+          }
+        });
+        socket.addEventListener("error", () => {
+          lobbyStatus.textContent = "Could not reach the game server. Check its address and that it is running.";
+          joinButton.disabled = false;
+        });
+        socket.addEventListener("close", () => {
+          if (!game.connected) joinButton.disabled = false;
+          game.connected = false;
+          if (game.playerId !== null) {
+            lobby.style.display = "grid";
+            lobbyStatus.textContent = "Disconnected from the arena. Check the server, then join again.";
+            showToast("Disconnected from arena");
+          }
+        });
+      });
+
+      window.addEventListener("resize", resize);
+      window.addEventListener("keydown", event => {
+        const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+        if ([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(key)) event.preventDefault();
+        if (key === "Escape" || key === "p") {
+          game.paused = !game.paused;
+          showToast(game.paused ? "Paused" : "Back to the wild");
+        }
+        held.add(key);
+      });
+      window.addEventListener("keyup", event => {
+        const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+        held.delete(key);
+      });
+      window.addEventListener("blur", () => held.clear());
+      document.querySelector("#restart").addEventListener("click", reset);
+
+      resize();
+      reset();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
